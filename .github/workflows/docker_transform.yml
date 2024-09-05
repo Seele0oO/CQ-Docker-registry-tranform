@@ -1,0 +1,49 @@
+name: Docker CI with Webhook
+
+on:
+  repository_dispatch:
+    types: [docker_transform]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Log in to source Docker registry (if credentials provided)
+        if: ${{ github.event.client_payload.source_username != '' && github.event.client_payload.source_password != '' }}
+        run: |
+          echo "${{ github.event.client_payload.source_password }}" | docker login ${{ github.event.client_payload.source_registry }} -u ${{ github.event.client_payload.source_username }} --password-stdin
+
+      - name: Log in to target Docker registry (if credentials provided)
+        if: ${{ github.event.client_payload.target_username != '' && github.event.client_payload.target_password != '' }}
+        run: |
+          echo "${{ github.event.client_payload.target_password }}" | docker login ${{ github.event.client_payload.target_registry }} -u ${{ github.event.client_payload.target_username }} --password-stdin
+
+      - name: Pull image from source registry (从源镜像仓库拉取镜像)
+        run: |
+          docker pull ${{ github.event.client_payload.source_registry }}/${{ github.event.client_payload.source_namespace }}/${{ github.event.client_payload.source_image }}:${{ github.event.client_payload.source_tag }}
+
+      - name: Tag image for target registry (为目标镜像仓库打标签)
+        run: |
+          docker tag ${{ github.event.client_payload.source_registry }}/${{ github.event.client_payload.source_namespace }}/${{ github.event.client_payload.source_image }}:${{ github.event.client_payload.source_tag }} ${{ github.event.client_payload.target_registry }}/${{ github.event.client_payload.target_namespace }}/${{ github.event.client_payload.target_image }}:${{ github.event.client_payload.target_tag }}
+
+      - name: Push image to target registry (推送镜像到目标仓库)
+        run: |
+          docker push ${{ github.event.client_payload.target_registry }}/${{ github.event.client_payload.target_namespace }}/${{ github.event.client_payload.target_image }}:${{ github.event.client_payload.target_tag }}
+
+      # - name: Send webhook to DingTalk (发送钉钉消息通知)
+      #   run: |
+      #     curl -X POST "https://oapi.dingtalk.com/robot/send?access_token=YOUR_DINGTALK_ACCESS_TOKEN" \
+      #     -H "Content-Type: application/json" \
+      #     -d '{
+      #           "msgtype": "text",
+      #           "text": {
+      #               "content": "Docker 镜像推送成功：${{ github.event.client_payload.source_image }}:${{ github.event.client_payload.source_tag }} -> ${{ github.event.client_payload.target_namespace }}/${{ github.event.client_payload.target_image }}:${{ github.event.client_payload.target_tag }}"
+      #           }
+      #         }'
