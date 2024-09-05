@@ -2,7 +2,7 @@ name: Docker CI with Webhook
 
 on:
   repository_dispatch:
-    types: [docker_transform]
+    types: [docker_mirror_push]
 
 jobs:
   build:
@@ -15,35 +15,42 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
-      - name: Log in to source Docker registry (if credentials provided)
-        if: ${{ github.event.client_payload.source_username != '' && github.event.client_payload.source_password != '' }}
+      - name: Parse source and target image details
         run: |
-          echo "${{ github.event.client_payload.source_password }}" | docker login ${{ github.event.client_payload.source_registry }} -u ${{ github.event.client_payload.source_username }} --password-stdin
+          SOURCE_REGISTRY="${{ github.event.client_payload.source.source_registry }}"
+          SOURCE_NAMESPACE="${{ github.event.client_payload.source.source_namespace }}"
+          SOURCE_IMAGE="${{ github.event.client_payload.source.source_image }}"
+          SOURCE_TAG="${{ github.event.client_payload.source.source_tag }}"
+          TARGET_REGISTRY="${{ github.event.client_payload.target.target_registry }}"
+          TARGET_NAMESPACE="${{ github.event.client_payload.target.target_namespace }}"
+          TARGET_IMAGE="${{ github.event.client_payload.target.target_image }}"
+          TARGET_TAG="${{ github.event.client_payload.target.target_tag }}"
+          echo "Source: $SOURCE_REGISTRY/$SOURCE_NAMESPACE/$SOURCE_IMAGE:$SOURCE_TAG"
+          echo "Target: $TARGET_REGISTRY/$TARGET_NAMESPACE/$TARGET_IMAGE:$TARGET_TAG"
 
       - name: Log in to target Docker registry (if credentials provided)
-        if: ${{ github.event.client_payload.target_username != '' && github.event.client_payload.target_password != '' }}
         run: |
-          echo "${{ github.event.client_payload.target_password }}" | docker login ${{ github.event.client_payload.target_registry }} -u ${{ github.event.client_payload.target_username }} --password-stdin
+          echo "${{ github.event.client_payload.target.target_password }}" | docker login $TARGET_REGISTRY -u ${{ github.event.client_payload.target.target_username }} --password-stdin
 
-      - name: Pull image from source registry (从源镜像仓库拉取镜像)
+      - name: Pull image from source registry
         run: |
-          docker pull ${{ github.event.client_payload.source_registry }}/${{ github.event.client_payload.source_namespace }}/${{ github.event.client_payload.source_image }}:${{ github.event.client_payload.source_tag }}
+          docker pull $SOURCE_REGISTRY/$SOURCE_NAMESPACE/$SOURCE_IMAGE:$SOURCE_TAG
 
-      - name: Tag image for target registry (为目标镜像仓库打标签)
+      - name: Tag image for target registry
         run: |
-          docker tag ${{ github.event.client_payload.source_registry }}/${{ github.event.client_payload.source_namespace }}/${{ github.event.client_payload.source_image }}:${{ github.event.client_payload.source_tag }} ${{ github.event.client_payload.target_registry }}/${{ github.event.client_payload.target_namespace }}/${{ github.event.client_payload.target_image }}:${{ github.event.client_payload.target_tag }}
+          docker tag $SOURCE_REGISTRY/$SOURCE_NAMESPACE/$SOURCE_IMAGE:$SOURCE_TAG $TARGET_REGISTRY/$TARGET_NAMESPACE/$TARGET_IMAGE:$TARGET_TAG
 
-      - name: Push image to target registry (推送镜像到目标仓库)
+      - name: Push image to target registry
         run: |
-          docker push ${{ github.event.client_payload.target_registry }}/${{ github.event.client_payload.target_namespace }}/${{ github.event.client_payload.target_image }}:${{ github.event.client_payload.target_tag }}
+          docker push $TARGET_REGISTRY/$TARGET_NAMESPACE/$TARGET_IMAGE:$TARGET_TAG
 
-      # - name: Send webhook to DingTalk (发送钉钉消息通知)
+      # - name: Send webhook to DingTalk
       #   run: |
       #     curl -X POST "https://oapi.dingtalk.com/robot/send?access_token=YOUR_DINGTALK_ACCESS_TOKEN" \
       #     -H "Content-Type: application/json" \
       #     -d '{
       #           "msgtype": "text",
       #           "text": {
-      #               "content": "Docker 镜像推送成功：${{ github.event.client_payload.source_image }}:${{ github.event.client_payload.source_tag }} -> ${{ github.event.client_payload.target_namespace }}/${{ github.event.client_payload.target_image }}:${{ github.event.client_payload.target_tag }}"
+      #               "content": "Docker 镜像推送成功：${{ github.event.client_payload.source.source_image }}:${{ github.event.client_payload.source.source_tag }} -> ${{ github.event.client_payload.target.target_namespace }}/${{ github.event.client_payload.target.target_image }}:${{ github.event.client_payload.target.target_tag }}"
       #           }
       #         }'
