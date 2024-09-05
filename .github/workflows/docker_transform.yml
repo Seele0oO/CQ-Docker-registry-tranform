@@ -10,10 +10,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Parse source and target image details
         run: |
@@ -43,13 +43,13 @@ jobs:
         run: |
           docker push ${{ env.TARGET_REGISTRY }}/${{ env.TARGET_NAMESPACE }}/${{ env.TARGET_IMAGE }}:${{ env.TARGET_TAG }}
 
-      # - name: Send webhook to DingTalk
-      #   run: |
-      #     curl -X POST "https://oapi.dingtalk.com/robot/send?access_token=YOUR_DINGTALK_ACCESS_TOKEN" \
-      #     -H "Content-Type: application/json" \
-      #     -d '{
-      #           "msgtype": "text",
-      #           "text": {
-      #               "content": "Docker 镜像推送成功：${{ env.SOURCE_IMAGE }}:${{ env.SOURCE_TAG }} -> ${{ env.TARGET_NAMESPACE }}/${{ env.TARGET_IMAGE }}:${{ env.TARGET_TAG }}"
-      #           }
-      #         }'
+      - name: Send webhook to DingTalk
+        run: |
+          curl -X POST "${{ secrets.DINGDINGBOT }}" \
+          -H "Content-Type: application/json" \
+          -d '{
+                "msgtype": "text",
+                "text": {
+                    "content": "Docker 镜像推送成功：${{ env.SOURCE_IMAGE }}:${{ env.SOURCE_TAG }} -> ${{ env.TARGET_NAMESPACE }}/${{ env.TARGET_IMAGE }}:${{ env.TARGET_TAG }}"
+                }
+              }'
