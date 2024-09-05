@@ -48,8 +48,9 @@ jobs:
           curl -X POST "${{ secrets.DINGDINGBOT }}" \
           -H "Content-Type: application/json" \
           -d '{
-                "msgtype": "text",
-                "text": {
-                    "content": "Docker 镜像推送成功：${{ env.SOURCE_IMAGE }}:${{ env.SOURCE_TAG }} -> ${{ env.TARGET_NAMESPACE }}/${{ env.TARGET_IMAGE }}:${{ env.TARGET_TAG }}"
-                }
+                "markdown": {
+                    "title": "Docker",
+                    "text": "# Docker 镜像推送成功 \n 来源镜像: \n \n > `${{ env.SOURCE_REGISTRY }}/${{ env.SOURCE_NAMESPACE }}/${{ env.SOURCE_IMAGE }}:${{ env.SOURCE_TAG }}` \n \n  目标镜像: \n \n > `r${{ env.TARGET_REGISTRY }}/${{ env.TARGET_NAMESPACE }}/${{ env.TARGET_IMAGE }}:${{ env.TARGET_TAG }}`"
+                },
+                "msgtype": "markdown"
               }'
