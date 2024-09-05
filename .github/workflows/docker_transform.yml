@@ -29,6 +29,7 @@ jobs:
           echo "Target: $TARGET_REGISTRY/$TARGET_NAMESPACE/$TARGET_IMAGE:$TARGET_TAG"
 
       - name: Log in to target Docker registry (if credentials provided)
+        if: ${{ github.event.client_payload.target.target_username != '' && github.event.client_payload.target.target_password != '' }}
         run: |
           echo "${{ github.event.client_payload.target.target_password }}" | docker login $TARGET_REGISTRY -u ${{ github.event.client_payload.target.target_username }} --password-stdin
 
