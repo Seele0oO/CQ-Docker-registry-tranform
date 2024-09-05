@@ -17,33 +17,31 @@ jobs:
 
       - name: Parse source and target image details
         run: |
-          SOURCE_REGISTRY="${{ github.event.client_payload.source.source_registry }}"
-          SOURCE_NAMESPACE="${{ github.event.client_payload.source.source_namespace }}"
-          SOURCE_IMAGE="${{ github.event.client_payload.source.source_image }}"
-          SOURCE_TAG="${{ github.event.client_payload.source.source_tag }}"
-          TARGET_REGISTRY="${{ github.event.client_payload.target.target_registry }}"
-          TARGET_NAMESPACE="${{ github.event.client_payload.target.target_namespace }}"
-          TARGET_IMAGE="${{ github.event.client_payload.target.target_image }}"
-          TARGET_TAG="${{ github.event.client_payload.target.target_tag }}"
-          echo "Source: $SOURCE_REGISTRY/$SOURCE_NAMESPACE/$SOURCE_IMAGE:$SOURCE_TAG"
-          echo "Target: $TARGET_REGISTRY/$TARGET_NAMESPACE/$TARGET_IMAGE:$TARGET_TAG"
+          echo "SOURCE_REGISTRY=${{ github.event.client_payload.source.source_registry }}" >> $GITHUB_ENV
+          echo "SOURCE_NAMESPACE=${{ github.event.client_payload.source.source_namespace }}" >> $GITHUB_ENV
+          echo "SOURCE_IMAGE=${{ github.event.client_payload.source.source_image }}" >> $GITHUB_ENV
+          echo "SOURCE_TAG=${{ github.event.client_payload.source.source_tag }}" >> $GITHUB_ENV
+          echo "TARGET_REGISTRY=${{ github.event.client_payload.target.target_registry }}" >> $GITHUB_ENV
+          echo "TARGET_NAMESPACE=${{ github.event.client_payload.target.target_namespace }}" >> $GITHUB_ENV
+          echo "TARGET_IMAGE=${{ github.event.client_payload.target.target_image }}" >> $GITHUB_ENV
+          echo "TARGET_TAG=${{ github.event.client_payload.target.target_tag }}" >> $GITHUB_ENV
 
       - name: Log in to target Docker registry (if credentials provided)
         if: ${{ github.event.client_payload.target.target_username != '' && github.event.client_payload.target.target_password != '' }}
         run: |
-          echo "${{ github.event.client_payload.target.target_password }}" | docker login $TARGET_REGISTRY -u ${{ github.event.client_payload.target.target_username }} --password-stdin
+          echo "${{ github.event.client_payload.target.target_password }}" | docker login ${{ env.TARGET_REGISTRY }} -u ${{ github.event.client_payload.target.target_username }} --password-stdin
 
       - name: Pull image from source registry
         run: |
-          docker pull $SOURCE_REGISTRY/$SOURCE_NAMESPACE/$SOURCE_IMAGE:$SOURCE_TAG
+          docker pull ${{ env.SOURCE_REGISTRY }}/${{ env.SOURCE_NAMESPACE }}/${{ env.SOURCE_IMAGE }}:${{ env.SOURCE_TAG }}
 
       - name: Tag image for target registry
         run: |
-          docker tag $SOURCE_REGISTRY/$SOURCE_NAMESPACE/$SOURCE_IMAGE:$SOURCE_TAG $TARGET_REGISTRY/$TARGET_NAMESPACE/$TARGET_IMAGE:$TARGET_TAG
+          docker tag ${{ env.SOURCE_REGISTRY }}/${{ env.SOURCE_NAMESPACE }}/${{ env.SOURCE_IMAGE }}:${{ env.SOURCE_TAG }} ${{ env.TARGET_REGISTRY }}/${{ env.TARGET_NAMESPACE }}/${{ env.TARGET_IMAGE }}:${{ env.TARGET_TAG }}
 
       - name: Push image to target registry
         run: |
-          docker push $TARGET_REGISTRY/$TARGET_NAMESPACE/$TARGET_IMAGE:$TARGET_TAG
+          docker push ${{ env.TARGET_REGISTRY }}/${{ env.TARGET_NAMESPACE }}/${{ env.TARGET_IMAGE }}:${{ env.TARGET_TAG }}
 
       # - name: Send webhook to DingTalk
       #   run: |
@@ -52,6 +50,6 @@ jobs:
       #     -d '{
       #           "msgtype": "text",
       #           "text": {
-      #               "content": "Docker 镜像推送成功：${{ github.event.client_payload.source.source_image }}:${{ github.event.client_payload.source.source_tag }} -> ${{ github.event.client_payload.target.target_namespace }}/${{ github.event.client_payload.target.target_image }}:${{ github.event.client_payload.target.target_tag }}"
+      #               "content": "Docker 镜像推送成功：${{ env.SOURCE_IMAGE }}:${{ env.SOURCE_TAG }} -> ${{ env.TARGET_NAMESPACE }}/${{ env.TARGET_IMAGE }}:${{ env.TARGET_TAG }}"
       #           }
       #         }'
